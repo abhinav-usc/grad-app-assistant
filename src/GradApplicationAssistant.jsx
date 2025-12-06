@@ -46,7 +46,8 @@ const GradApplicationAssistant = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [editHistory, setEditHistory] = useState({});
 
-
+  const applicants = ['Your Name (edit in code)', 'Second User Name'];
+  
   const majorOptions = [
     'Electrical Engineering',
     'Computer Science',
@@ -73,7 +74,8 @@ const GradApplicationAssistant = () => {
 
   const defaultSections = [
     { id: 'faculty', name: 'Faculty Matches', questions: [] },
-    { id: 'sop', name: 'Statement of Purpose', questions: [] }
+    { id: 'sop', name: 'Statement of Purpose', questions: [] },
+    { id: 'admission-analysis', name: 'Admission Analysis', questions: [] }
   ];
 
   const commonSectionTemplates = [
@@ -91,7 +93,7 @@ const GradApplicationAssistant = () => {
     // Load global custom interests
     const saved = localStorage.getItem('customInterests');
     if (saved) setCustomInterests(JSON.parse(saved));
-
+    
     // Initialize section templates if not exists
     const savedSectionNames = localStorage.getItem('allUsedSectionNames');
     if (!savedSectionNames) {
@@ -118,7 +120,7 @@ const GradApplicationAssistant = () => {
   const loadApplicantData = (applicantName) => {
     const key = `applicant_${applicantName.replace(/\s+/g, '_')}`;
     const saved = localStorage.getItem(key);
-
+    
     if (saved) {
       const data = JSON.parse(saved);
       setSections(data.sections || defaultSections);
@@ -135,7 +137,7 @@ const GradApplicationAssistant = () => {
 
   const saveApplicantData = () => {
     if (!selectedApplicant) return;
-
+    
     const key = `applicant_${selectedApplicant.replace(/\s+/g, '_')}`;
     const data = {
       sections: sections,
@@ -149,7 +151,7 @@ const GradApplicationAssistant = () => {
       fileTexts: fileTexts,
       lastUpdated: new Date().toISOString()
     };
-
+    
     localStorage.setItem(key, JSON.stringify(data));
   };
 
@@ -173,10 +175,10 @@ const GradApplicationAssistant = () => {
     };
 
     localStorage.setItem(responseKey, JSON.stringify(responseData));
-
+    
     // Update saved responses list
     loadSavedResponsesList();
-
+    
     alert('Responses saved successfully!');
   };
 
@@ -189,7 +191,7 @@ const GradApplicationAssistant = () => {
     const prefix = `responses_${selectedApplicant.replace(/\s+/g, '_')}_`;
     const allKeys = Object.keys(localStorage);
     const responseKeys = allKeys.filter(key => key.startsWith(prefix));
-
+    
     const responsesList = responseKeys.map(key => {
       try {
         const data = JSON.parse(localStorage.getItem(key));
@@ -204,7 +206,7 @@ const GradApplicationAssistant = () => {
 
     // Sort by date, newest first
     responsesList.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
-
+    
     setSavedResponsesList(responsesList);
   };
 
@@ -278,7 +280,7 @@ const GradApplicationAssistant = () => {
     try {
       // Build content array with text and documents
       const content = [];
-
+      
       // Add documents first
       if (documents && documents.length > 0) {
         documents.forEach(doc => {
@@ -292,7 +294,7 @@ const GradApplicationAssistant = () => {
           });
         });
       }
-
+      
       // Add text prompt
       content.push({
         type: "text",
@@ -305,8 +307,8 @@ const GradApplicationAssistant = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 4000,
+          model: 'claude-sonnet-4-5-20250929',
+          max_tokens: 8000,
           system: systemPrompt,
           messages: [{ role: 'user', content: content }]
         })
@@ -326,20 +328,20 @@ const GradApplicationAssistant = () => {
       }
 
       const data = await response.json();
-
+      
       if (data.error) {
         throw new Error(data.error.message || 'API request failed');
       }
-
+      
       return data.content.map(item => item.type === 'text' ? item.text : '').join('\n');
     } catch (error) {
       console.error('API Error:', error);
-
+      
       // Better error messages
       if (error.message.includes('Failed to fetch')) {
         throw new Error('Cannot connect to backend server. Make sure it is running on port 3001.');
       }
-
+      
       throw error;
     }
   };
@@ -356,7 +358,7 @@ const GradApplicationAssistant = () => {
     try {
       let cvText = '', sopText = '', psText = '';
       let cvDoc = null, sopDoc = null, psDoc = null;
-
+      
       // Read CV - use uploaded file or saved text
       if (files.cv) {
         cvDoc = await readFileAsBase64(files.cv);
@@ -442,16 +444,16 @@ Format as a ranked list.`;
       setResponses(prev => ({ ...prev, faculty: facultyMatches }));
 
       setProcessingStep('Revising Statement of Purpose...');
-
+      
       // Detect if SoP is in LaTeX format
-      const sopIsLatex = sopText.includes('\\documentclass') ||
-        sopText.includes('\\begin{document}') ||
-        isLatex.sop;
-
-      const latexInstructions = sopIsLatex
+      const sopIsLatex = sopText.includes('\\documentclass') || 
+                        sopText.includes('\\begin{document}') || 
+                        isLatex.sop;
+      
+      const latexInstructions = sopIsLatex 
         ? 'The original statement is in LaTeX format. Maintain LaTeX formatting in your response. Use proper LaTeX commands and structure.'
         : '';
-
+      
       const revisedSOP = await callClaudeAPI(
         `Revise this Statement of Purpose for ${programInfo.collegeName}'s ${programInfo.program} program. Incorporate the following faculty interests and program specifics. Maintain the applicant's voice but strengthen alignment with the program.
 
@@ -472,16 +474,16 @@ Create a compelling, specific SoP that demonstrates clear fit with the program. 
 
       if (psText && psText.length > 100) {
         setProcessingStep('Revising Personal Statement...');
-
+        
         // Detect if Personal Statement is in LaTeX format
-        const psIsLatex = psText.includes('\\documentclass') ||
-          psText.includes('\\begin{document}') ||
-          isLatex.personalStatement;
-
-        const latexInstructions = psIsLatex
+        const psIsLatex = psText.includes('\\documentclass') || 
+                         psText.includes('\\begin{document}') || 
+                         isLatex.personalStatement;
+        
+        const latexInstructions = psIsLatex 
           ? 'The original statement is in LaTeX format. Maintain LaTeX formatting in your response. Use proper LaTeX commands and structure.'
           : '';
-
+        
         const revisedPS = await callClaudeAPI(
           `Revise this Personal Statement to better address themes of personal growth, challenges overcome, and unique perspective. Tailor it for a graduate application to ${programInfo.collegeName}.
 
@@ -499,7 +501,7 @@ Maintain the personal voice but strengthen narrative coherence and impact. Match
 
       setProcessingStep('Answering application questions...');
       for (const section of sections) {
-        if (section.id !== 'faculty' && section.id !== 'sop' && section.id !== 'personal') {
+        if (section.id !== 'faculty' && section.id !== 'sop' && section.id !== 'personal' && section.id !== 'admission-analysis') {
           // Check if section has freeform content
           if (section.freeformContent && section.freeformContent.trim()) {
             const freeformPrompt = `Based on this applicant's profile and the application section content provided below, generate all necessary responses.
@@ -520,11 +522,11 @@ ${psText ? `Personal Statement Summary: ${psText.substring(0, 1000)}` : ''}
 Analyze the section content and provide comprehensive, well-organized responses to all questions or prompts. Structure your response clearly with headings if there are multiple questions.`;
 
             const personalKeywords = ['diversity', 'community', 'background', 'culture', 'personal', 'identity', 'experience', 'challenges', 'overcome', 'perspective', 'contribute'];
-            const isPersonalSection = personalKeywords.some(keyword =>
+            const isPersonalSection = personalKeywords.some(keyword => 
               section.freeformContent.toLowerCase().includes(keyword) || section.name.toLowerCase().includes(keyword)
             );
-
-            const toneReference = isPersonalSection
+            
+            const toneReference = isPersonalSection 
               ? 'Match the personal, authentic tone and writing style of the personal statement provided.'
               : 'Match the formal, academic tone and writing style of the statement of purpose provided.';
 
@@ -542,14 +544,14 @@ Analyze the section content and provide comprehensive, well-organized responses 
           else if (section.questions && section.questions.length > 0) {
             for (const question of section.questions) {
               const personalKeywords = ['diversity', 'community', 'background', 'culture', 'personal', 'identity', 'experience', 'challenges', 'overcome', 'perspective', 'contribute'];
-              const isPersonalQuestion = personalKeywords.some(keyword =>
+              const isPersonalQuestion = personalKeywords.some(keyword => 
                 question.toLowerCase().includes(keyword)
               );
-
-              const toneReference = isPersonalQuestion
+              
+              const toneReference = isPersonalQuestion 
                 ? 'Match the personal, authentic tone and writing style of the personal statement provided.'
                 : 'Match the formal, academic tone and writing style of the statement of purpose provided.';
-
+              
               const referenceText = isPersonalQuestion
                 ? `Personal Statement tone reference:\n${psText.substring(0, 500)}`
                 : `Statement of Purpose tone reference:\n${sopText.substring(0, 500)}`;
@@ -584,10 +586,79 @@ Provide a compelling 200-300 word response that demonstrates fit and authenticit
         }
       }
 
+      // Generate Admission Analysis
+      setProcessingStep('Analyzing admission chances...');
+      const admissionAnalysisPrompt = `You are an expert graduate admissions consultant. Analyze this applicant's chances of admission and provide detailed, honest feedback.
+
+APPLICANT PROFILE:
+Name: ${selectedApplicant}
+Target Program: ${programInfo.program}
+Target Institution: ${programInfo.collegeName}
+Major/Concentration: ${programInfo.major}
+Research Interests: ${programInfo.interests.join(', ')}
+
+COMPLETE CV:
+${cvText}
+
+REVISED STATEMENT OF PURPOSE:
+${responses.sop || sopText}
+
+${psText ? `PERSONAL STATEMENT:\n${psText}\n` : ''}
+
+FACULTY ALIGNMENT:
+${responses.faculty}
+
+TASK:
+Provide a comprehensive admission analysis with the following sections:
+
+1. **Admission Chances Estimate**
+   - Provide a realistic percentage range (e.g., 60-75%)
+   - Rate as: Very Strong / Strong / Competitive / Moderate / Reach
+   - Brief justification (2-3 sentences)
+
+2. **Key Strengths** (3-5 points)
+   - What makes this applicant stand out?
+   - Specific achievements, experiences, or qualities
+
+3. **Potential Weaknesses or Gaps** (2-4 points)
+   - Be honest but constructive
+   - What might raise concerns for the admissions committee?
+   - What's missing from the profile?
+
+4. **Fit Analysis**
+   - How well does the applicant align with this specific program?
+   - Research fit
+   - Faculty matches
+   - Program culture/values
+
+5. **Actionable Steps to Strengthen Application** (5-8 steps)
+   - Concrete, specific actions they can take NOW
+   - Prioritize by impact
+   - Include both quick wins and longer-term improvements
+   - Be realistic about timelines
+
+6. **Red Flags to Address** (if any)
+   - Issues that MUST be addressed in the application
+   - How to address them
+
+7. **Final Recommendation**
+   - Should they apply?
+   - Apply as reach/target/safety?
+   - Any alternative strategies?
+
+Be honest, specific, and actionable. Use data and examples from their materials. Focus on improvement, not discouragement.`;
+
+      const admissionAnalysis = await callClaudeAPI(
+        admissionAnalysisPrompt,
+        'You are an expert graduate admissions consultant with deep knowledge of PhD/MS admissions processes. Provide honest, data-driven, actionable advice. CRITICAL FORMATTING RULES: Never use em dashes. Minimize colon usage (only use when absolutely necessary). Use markdown formatting with ## for section headers and **bold** for emphasis.'
+      );
+
+      setResponses(prev => ({ ...prev, 'admission-analysis': admissionAnalysis }));
+
       setSetupComplete(true);
       setLoading(false);
       setProcessingStep('');
-
+      
       // Auto-save responses
       setTimeout(() => {
         saveResponses();
@@ -604,7 +675,7 @@ Provide a compelling 200-300 word response that demonstrates fit and authenticit
     const newSection = { ...template };
     const updated = [...sections, newSection];
     setSections(updated);
-
+    
     const allUsedNames = JSON.parse(localStorage.getItem('allUsedSectionNames') || '[]');
     const exists = allUsedNames.some(s => s.id === template.id);
     if (!exists) {
@@ -623,7 +694,7 @@ Provide a compelling 200-300 word response that demonstrates fit and authenticit
       };
       const updated = [...sections, newSection];
       setSections(updated);
-
+      
       const allUsedNames = JSON.parse(localStorage.getItem('allUsedSectionNames') || '[]');
       allUsedNames.push({ id: newSection.id, name: newSection.name });
       localStorage.setItem('allUsedSectionNames', JSON.stringify(allUsedNames));
@@ -632,20 +703,20 @@ Provide a compelling 200-300 word response that demonstrates fit and authenticit
 
   const moveSection = (index, direction) => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-
-    if (index < 2 || newIndex < 2 || newIndex >= sections.length) return;
-
+    
+    if (index < 3 || newIndex < 3 || newIndex >= sections.length) return;
+    
     const updated = [...sections];
     const temp = updated[index];
     updated[index] = updated[newIndex];
     updated[newIndex] = temp;
-
+    
     setSections(updated);
   };
 
   const removeSection = (index) => {
-    if (index < 2) return;
-
+    if (index < 3) return;
+    
     const updated = sections.filter((_, i) => i !== index);
     setSections(updated);
   };
@@ -653,8 +724,8 @@ Provide a compelling 200-300 word response that demonstrates fit and authenticit
   const addQuestion = (sectionId) => {
     const question = prompt('Enter question:');
     if (question) {
-      const updated = sections.map(s =>
-        s.id === sectionId
+      const updated = sections.map(s => 
+        s.id === sectionId 
           ? { ...s, questions: [...s.questions, question] }
           : s
       );
@@ -663,8 +734,8 @@ Provide a compelling 200-300 word response that demonstrates fit and authenticit
   };
 
   const updateSectionContent = (sectionId, content) => {
-    const updated = sections.map(s =>
-      s.id === sectionId
+    const updated = sections.map(s => 
+      s.id === sectionId 
         ? { ...s, freeformContent: content }
         : s
     );
@@ -690,33 +761,33 @@ Provide a compelling 200-300 word response that demonstrates fit and authenticit
 
   const markdownToHTML = (text) => {
     if (!text) return '';
-
+    
     let html = text;
-
+    
     // Headers (h1-h6)
     html = html.replace(/^##### (.*$)/gim, '<h5>$1</h5>');
     html = html.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
     html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
     html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
     html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-
+    
     // Bold
     html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
-
+    
     // Italic
     html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
     html = html.replace(/_(.*?)_/g, '<em>$1</em>');
-
+    
     // Line breaks
     html = html.replace(/\n\n/g, '</p><p>');
     html = html.replace(/\n/g, '<br/>');
-
+    
     // Wrap in paragraph if not already wrapped
     if (!html.startsWith('<')) {
       html = '<p>' + html + '</p>';
     }
-
+    
     return html;
   };
 
@@ -734,9 +805,9 @@ Provide a compelling 200-300 word response that demonstrates fit and authenticit
     </w:p>
   </w:body>
 </w:document>`;
-
-      const blob = new Blob([docxContent], {
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      
+      const blob = new Blob([docxContent], { 
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -759,11 +830,11 @@ Provide a compelling 200-300 word response that demonstrates fit and authenticit
 
   const editSectionContent = async (sectionId, editInstruction, wordLimit = null, pageLimit = null) => {
     setEditLoading(true);
-
+    
     try {
       const currentContent = responses[sectionId];
-      const contentToEdit = typeof currentContent === 'object' && currentContent.freeform
-        ? currentContent.freeform
+      const contentToEdit = typeof currentContent === 'object' && currentContent.freeform 
+        ? currentContent.freeform 
         : currentContent;
 
       // Build context from saved data
@@ -778,14 +849,14 @@ ${fileTexts.sop ? `Original SoP:\n${fileTexts.sop.substring(0, 1500)}\n` : ''}
 ${fileTexts.personalStatement ? `Original Personal Statement:\n${fileTexts.personalStatement.substring(0, 1500)}\n` : ''}
 `;
 
-      const limitInfo = wordLimit
+      const limitInfo = wordLimit 
         ? `IMPORTANT: The final output must be EXACTLY ${wordLimit} words or fewer.`
-        : pageLimit
-          ? `IMPORTANT: The final output must fit within ${pageLimit} page(s) (approximately ${pageLimit * 250} words).`
-          : '';
+        : pageLimit 
+        ? `IMPORTANT: The final output must fit within ${pageLimit} page(s) (approximately ${pageLimit * 250} words).`
+        : '';
 
-      const latexInfo = (sectionId === 'sop' && responses.sopIsLatex) ||
-        (sectionId === 'personal' && responses.personalIsLatex)
+      const latexInfo = (sectionId === 'sop' && responses.sopIsLatex) || 
+                       (sectionId === 'personal' && responses.personalIsLatex)
         ? 'IMPORTANT: The content is in LaTeX format. Maintain LaTeX formatting in your response.'
         : '';
 
@@ -881,7 +952,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
     if (editHistory[sectionId] && editHistory[sectionId].length > 0) {
       const history = editHistory[sectionId];
       const lastEdit = history[history.length - 1];
-
+      
       // Restore original content
       if (typeof responses[sectionId] === 'object' && responses[sectionId].freeform) {
         setResponses(prev => ({
@@ -920,16 +991,17 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
 
           <div className="form-card">
             <div className="form-section">
-              <label className="form-label">Applicant Name</label>
-                {/* <option vale="">Choose applicant...</option> */}
-                <input
-                  type="text"
-                  id="name"
-                  value={selectedApplicant}
-                   onChange={(e) => setSelectedApplicant(e.target.value)}
-                  placeholder="Your Name"
-                  className="text-input"
-                />
+              <label className="form-label">Select Applicant</label>
+              <select
+                value={selectedApplicant}
+                onChange={(e) => setSelectedApplicant(e.target.value)}
+                className="select-input"
+              >
+                <option value="">Choose applicant...</option>
+                {applicants.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="file-grid">
@@ -949,7 +1021,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                       {showFileTextEditor[key] ? 'Show Upload' : 'Paste Text'}
                     </button>
                   </div>
-
+                  
                   {!showFileTextEditor[key] ? (
                     <div className="file-upload-box">
                       <input
@@ -969,10 +1041,11 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                       <textarea
                         value={fileTexts[key]}
                         onChange={(e) => setFileTexts(prev => ({ ...prev, [key]: e.target.value }))}
-                        placeholder={`Paste your ${label.toLowerCase()} text here... ${key === 'sop' || key === 'personalStatement'
-                            ? 'You can paste LaTeX code or regular text.'
+                        placeholder={`Paste your ${label.toLowerCase()} text here... ${
+                          key === 'sop' || key === 'personalStatement' 
+                            ? 'You can paste LaTeX code or regular text.' 
                             : ''
-                          }`}
+                        }`}
                         className="file-text-editor"
                         rows={8}
                       />
@@ -989,7 +1062,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                       )}
                     </div>
                   )}
-
+                  
                   {fileTexts[key] && fileTexts[key].length > 100 && (
                     <div className="text-saved-indicator">
                       ✓ Saved ({fileTexts[key].length} characters)
@@ -997,7 +1070,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                   )}
                 </div>
               ))}
-
+              
               {/* Transcripts - file only */}
               <div className="file-upload-wrapper">
                 <label className="form-label">Transcripts</label>
@@ -1055,7 +1128,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
 
             <div className="form-section">
               <div className="interests-header">
-                <label className="form-label" style={{ marginBottom: 0 }}>Research Interests</label>
+                <label className="form-label" style={{marginBottom: 0}}>Research Interests</label>
                 <button onClick={addCustomInterest} className="add-custom-btn">
                   + Add Custom
                 </button>
@@ -1081,25 +1154,25 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
             <div className="form-section">
               <div className="sections-header">
                 <h3 className="sections-title">Application Sections</h3>
-                <button
-                  onClick={() => setShowSectionPicker(true)}
+                <button 
+                  onClick={() => setShowSectionPicker(true)} 
                   className="add-section-btn"
                 >
                   <Plus size={16} />
                   Add Section
                 </button>
               </div>
-
+              
               <div className="sections-list">
                 {sections.map((section, index) => (
                   <div key={section.id} className="section-item">
                     <div className="section-header">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        {index >= 2 && (
+                        {index >= 3 && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                             <button
                               onClick={() => moveSection(index, 'up')}
-                              disabled={index === 2}
+                              disabled={index === 3}
                               className="reorder-btn"
                               title="Move up"
                             >
@@ -1117,11 +1190,11 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                         )}
                         <span className="section-name">
                           {section.name}
-                          {index < 2 && <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '0.5rem' }}>(Required)</span>}
+                          {index < 3 && <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '0.5rem' }}>(Required)</span>}
                         </span>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        {!['faculty', 'sop'].includes(section.id) && (
+                        {!['faculty', 'sop', 'admission-analysis'].includes(section.id) && (
                           <>
                             <button
                               onClick={() => setEditingSectionId(editingSectionId === section.id ? null : section.id)}
@@ -1137,7 +1210,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                             </button>
                           </>
                         )}
-                        {index >= 2 && (
+                        {index >= 3 && (
                           <button
                             onClick={() => removeSection(index)}
                             className="remove-section-btn"
@@ -1148,7 +1221,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                         )}
                       </div>
                     </div>
-
+                    
                     {editingSectionId === section.id && (
                       <div className="freeform-editor">
                         <label className="freeform-label">
@@ -1166,7 +1239,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                         </div>
                       </div>
                     )}
-
+                    
                     {section.questions.length > 0 && (
                       <ul className="question-list">
                         {section.questions.map((q, i) => (
@@ -1320,11 +1393,11 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
             <div className="content-body">
               {currentSection.id === 'faculty' && responses.faculty && (
                 <>
-                  <div
+                  <div 
                     className="response-text markdown-content"
                     dangerouslySetInnerHTML={{ __html: markdownToHTML(responses.faculty) }}
                   />
-
+                  
                   {/* Edit Panel */}
                   <div className="edit-panel">
                     <div className="edit-panel-header">
@@ -1335,7 +1408,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                         </button>
                       )}
                     </div>
-
+                    
                     <div className="quick-actions">
                       <button onClick={() => handleQuickEdit('faculty', 'trim')} className="quick-action-btn">
                         ✂️ Trim
@@ -1402,7 +1475,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                       </button>
                     </div>
                   ) : (
-                    <div
+                    <div 
                       className="response-text markdown-content"
                       dangerouslySetInnerHTML={{ __html: markdownToHTML(responses.sop) }}
                     />
@@ -1418,7 +1491,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                         </button>
                       )}
                     </div>
-
+                    
                     <div className="quick-actions">
                       <button onClick={() => handleQuickEdit('sop', 'trim')} className="quick-action-btn">
                         ✂️ Trim
@@ -1488,7 +1561,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                       </button>
                     </div>
                   ) : (
-                    <div
+                    <div 
                       className="response-text markdown-content"
                       dangerouslySetInnerHTML={{ __html: markdownToHTML(responses.personal) }}
                     />
@@ -1504,7 +1577,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                         </button>
                       )}
                     </div>
-
+                    
                     <div className="quick-actions">
                       <button onClick={() => handleQuickEdit('personal', 'trim')} className="quick-action-btn">
                         ✂️ Trim
@@ -1548,11 +1621,70 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                 </div>
               )}
 
-              {!['faculty', 'sop', 'personal'].includes(currentSection.id) && (
+              {currentSection.id === 'admission-analysis' && responses['admission-analysis'] && (
+                <>
+                  <div className="admission-analysis-notice">
+                    <strong>📊 Honest Assessment:</strong> This analysis provides realistic feedback based on your materials. Use it to strengthen your application, not as a definitive prediction.
+                  </div>
+                  
+                  <div 
+                    className="response-text markdown-content admission-analysis-content"
+                    dangerouslySetInnerHTML={{ __html: markdownToHTML(responses['admission-analysis']) }}
+                  />
+
+                  {/* Edit Panel */}
+                  <div className="edit-panel">
+                    <div className="edit-panel-header">
+                      <h4>✨ Edit with Claude</h4>
+                      {editHistory['admission-analysis'] && editHistory['admission-analysis'].length > 0 && (
+                        <button onClick={() => undoLastEdit('admission-analysis')} className="undo-btn">
+                          ↶ Undo Last Edit
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="quick-actions">
+                      <button onClick={() => handleQuickEdit('admission-analysis', 'expand')} className="quick-action-btn">
+                        📈 More Detail
+                      </button>
+                      <button onClick={() => handleQuickEdit('admission-analysis', 'more-specific')} className="quick-action-btn">
+                        🎯 More Specific Steps
+                      </button>
+                    </div>
+
+                    <div className="custom-edit-box">
+                      <textarea
+                        value={editingSection === 'admission-analysis' ? editPrompt : ''}
+                        onChange={(e) => {
+                          setEditingSection('admission-analysis');
+                          setEditPrompt(e.target.value);
+                        }}
+                        placeholder="Or type your own editing instruction... (e.g., 'Focus more on research fit' or 'Add more actionable steps for improving GPA')"
+                        className="edit-prompt-input"
+                        rows={3}
+                        disabled={editLoading}
+                      />
+                      <button
+                        onClick={() => {
+                          if (editPrompt.trim()) {
+                            editSectionContent('admission-analysis', editPrompt);
+                          }
+                        }}
+                        disabled={editLoading || !editPrompt.trim()}
+                        className="submit-edit-btn"
+                      >
+                        {editLoading ? <><Loader2 className="spin" size={16} /> Editing...</> : '🚀 Apply Edit'}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {!['faculty', 'sop', 'personal', 'admission-analysis'].includes(currentSection.id) && (
                 <>
                   <div className="questions-section">
                     {responses[currentSection.id]?.freeform ? (
-                      <div
+                      <div 
                         className="response-text markdown-content"
                         dangerouslySetInnerHTML={{ __html: markdownToHTML(responses[currentSection.id].freeform) }}
                       />
@@ -1560,10 +1692,10 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                       currentSection.questions.map((question, i) => (
                         <div key={i} className="question-item">
                           <p className="question-text">{question}</p>
-                          <div
+                          <div 
                             className="answer-text markdown-content"
-                            dangerouslySetInnerHTML={{
-                              __html: markdownToHTML(responses[currentSection.id]?.[question] || 'Processing...')
+                            dangerouslySetInnerHTML={{ 
+                              __html: markdownToHTML(responses[currentSection.id]?.[question] || 'Processing...') 
                             }}
                           />
                         </div>
@@ -1581,7 +1713,7 @@ Please provide the edited version. ${latexInfo ? 'Output in LaTeX format.' : ''}
                         </button>
                       )}
                     </div>
-
+                    
                     <div className="quick-actions">
                       <button onClick={() => handleQuickEdit(currentSection.id, 'trim')} className="quick-action-btn">
                         ✂️ Trim

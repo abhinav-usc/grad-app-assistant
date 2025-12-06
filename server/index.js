@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-import Anthropic from "@anthropic-ai/sdk";
 
 const app = express();
 
@@ -20,20 +19,25 @@ app.post('/api/claude', async (req, res) => {
   try {
     console.log('Received request to /api/claude');
     
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({ 
+        error: { message: 'ANTHROPIC_API_KEY not configured in .env file' }
+      });
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(req.body)
+
+
     });
 
-    const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
-    max_tokens: 2000,
-    messages: [
-        {
-            role: "user",
-            content: JSON.stringify(req.body)
-        }
-        ]
-    });
+    
 
     const data = await response.json();
     

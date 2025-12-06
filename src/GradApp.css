@@ -1103,3 +1103,47 @@ body {
 .submit-edit-btn .spin {
   animation: spin 1s linear infinite;
 }
+
+/* Admission Analysis */
+.admission-analysis-notice {
+  padding: 1rem;
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9375rem;
+  color: #78350f;
+  line-height: 1.6;
+}
+
+.admission-analysis-notice strong {
+  color: #92400e;
+  font-weight: 700;
+}
+
+.admission-analysis-content h2 {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 2px solid #e2e8f0;
+}
+
+.admission-analysis-content h2:first-of-type {
+  margin-top: 0;
+  border-top: none;
+  padding-top: 0;
+}
+
+.admission-analysis-content ul {
+  margin-left: 1.5rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.admission-analysis-content li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.admission-analysis-content strong {
+  color: #1e293b;
+}
