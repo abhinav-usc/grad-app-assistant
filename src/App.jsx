@@ -1,4 +1,4 @@
-import GradApplicationAssistant from './GradApplicationAssistant'
+import GradApplicationAssistant from './grad-application-assistant'
 
 function App() {
   return <GradApplicationAssistant />
