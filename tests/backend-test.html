@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Backend Test</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-box {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+    }
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+    .loading {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+    }
+    h1 {
+      text-align: center;
+      color: #1e293b;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    .status.ok {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .status.fail {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Backend Server Test</h1>
+  
+  <div class="test-box">
+    <h2>Test 1: Health Check</h2>
+    <p>This tests if the backend server is running.</p>
+    <button onclick="testHealth()">Test Backend Connection</button>
+    <div id="health-result"></div>
+  </div>
+
+  <div class="test-box">
+    <h2>Test 2: Simple Claude API Call</h2>
+    <p>This tests if the Claude API is configured correctly.</p>
+    <button onclick="testClaude()">Test Claude API</button>
+    <div id="claude-result"></div>
+  </div>
+
+  <div class="test-box">
+    <h2>Quick Diagnosis</h2>
+    <div id="diagnosis">
+      <p>Run the tests above to diagnose issues.</p>
+    </div>
+  </div>
+
+  <script>
+    async function testHealth() {
+      const resultDiv = document.getElementById('health-result');
+      resultDiv.innerHTML = '<div class="result loading">Testing connection...</div>';
+      
+      try {
+        const response = await fetch('http://localhost:3001/api/health');
+        const data = await response.json();
+        
+        if (data.status === 'ok') {
+          resultDiv.innerHTML = `
+            <div class="result success">
+✓ SUCCESS!
+
+Backend server is running properly.
+Response: ${JSON.stringify(data, null, 2)}
+            </div>
+          `;
+          updateDiagnosis('health', true);
+        } else {
+          resultDiv.innerHTML = `
+            <div class="result error">
+✗ UNEXPECTED RESPONSE
+
+Server returned: ${JSON.stringify(data, null, 2)}
+            </div>
+          `;
+          updateDiagnosis('health', false);
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="result error">
+✗ CONNECTION FAILED
+
+Error: ${error.message}
+
+Possible causes:
+1. Backend server is not running
+2. Server crashed
+3. Wrong port (should be 3001)
+
+Solution:
+Open a terminal and run:
+  cd server
+  node index.js
+          </div>
+        `;
+        updateDiagnosis('health', false);
+      }
+    }
+
+    async function testClaude() {
+      const resultDiv = document.getElementById('claude-result');
+      resultDiv.innerHTML = '<div class="result loading">Testing Claude API... (this may take 5-10 seconds)</div>';
+      
+      try {
+        const response = await fetch('http://localhost:3001/api/claude', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 100,
+            messages: [
+              { role: 'user', content: 'Say "Hello! Backend is working correctly." and nothing else.' }
+            ]
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.content && data.content[0]?.text) {
+          resultDiv.innerHTML = `
+            <div class="result success">
+✓ SUCCESS!
+
+Claude API is working correctly.
+Response: "${data.content[0].text}"
+
+Your API key is valid and has credits.
+            </div>
+          `;
+          updateDiagnosis('claude', true);
+        } else if (data.error) {
+          resultDiv.innerHTML = `
+            <div class="result error">
+✗ API ERROR
+
+${data.error.message || JSON.stringify(data.error)}
+
+Possible causes:
+1. Invalid API key
+2. No API credits remaining
+3. Rate limit exceeded
+
+Solution:
+1. Check your API key at console.anthropic.com
+2. Make sure server/.env has the correct key
+3. Restart backend server after changing .env
+            </div>
+          `;
+          updateDiagnosis('claude', false);
+        } else {
+          resultDiv.innerHTML = `
+            <div class="result error">
+✗ UNEXPECTED RESPONSE
+
+${JSON.stringify(data, null, 2)}
+            </div>
+          `;
+          updateDiagnosis('claude', false);
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="result error">
+✗ REQUEST FAILED
+
+Error: ${error.message}
+
+This usually means the backend server is not running.
+Run Test 1 first to check backend connectivity.
+          </div>
+        `;
+        updateDiagnosis('claude', false);
+      }
+    }
+
+    const diagnosis = {
+      health: null,
+      claude: null
+    };
+
+    function updateDiagnosis(test, success) {
+      diagnosis[test] = success;
+      
+      const diagnosisDiv = document.getElementById('diagnosis');
+      
+      let message = '<h3>Diagnosis:</h3>';
+      
+      if (diagnosis.health === true && diagnosis.claude === true) {
+        message += `
+          <p><span class="status ok">✓ ALL SYSTEMS GO</span></p>
+          <p>Both tests passed! Your backend is configured correctly and ready to use.</p>
+          <p><strong>Next step:</strong> Start the frontend with <code>npm run dev</code></p>
+        `;
+      } else if (diagnosis.health === false) {
+        message += `
+          <p><span class="status fail">✗ BACKEND NOT RUNNING</span></p>
+          <p><strong>Problem:</strong> Cannot connect to backend server on port 3001.</p>
+          <p><strong>Solution:</strong></p>
+          <ol>
+            <li>Open a terminal</li>
+            <li>Navigate to your project: <code>cd server</code></li>
+            <li>Run: <code>node index.js</code></li>
+            <li>Leave that terminal open</li>
+            <li>Come back here and run Test 1 again</li>
+          </ol>
+        `;
+      } else if (diagnosis.health === true && diagnosis.claude === false) {
+        message += `
+          <p><span class="status fail">✗ API KEY ISSUE</span></p>
+          <p><strong>Problem:</strong> Backend is running but Claude API is not working.</p>
+          <p><strong>Solution:</strong></p>
+          <ol>
+            <li>Go to <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></li>
+            <li>Copy your API key (starts with sk-ant-api03-...)</li>
+            <li>Edit <code>server/.env</code> file</li>
+            <li>Make sure it says: <code>ANTHROPIC_API_KEY=sk-ant-api03-your-key</code></li>
+            <li>No quotes, no spaces</li>
+            <li>Stop backend (Ctrl+C) and restart it: <code>node index.js</code></li>
+            <li>Come back here and run Test 2 again</li>
+          </ol>
+        `;
+      } else {
+        message += '<p>Run the tests above to check your configuration.</p>';
+      }
+      
+      diagnosisDiv.innerHTML = message;
+    }
+  </script>
+</body>
+</html>
